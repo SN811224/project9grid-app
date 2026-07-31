@@ -1,0 +1,17 @@
+name: project9grid_app
+description: Project 9Grid CRM for insurance referral management.
+publish_to: "none"
+version: 3.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.8.4
+  intl: ^0.20.2
+
+flutter:
+  uses-material-design: true
