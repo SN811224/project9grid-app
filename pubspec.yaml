@@ -1,7 +1,7 @@
 name: project9grid_app
 description: Project 9Grid CRM Final v3
 publish_to: "none"
-version: 5.2.0+52
+version: 6.6.6+666
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
