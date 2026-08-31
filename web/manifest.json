@@ -3,9 +3,9 @@
   "short_name": "推薦互動程式",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#0175C2",
-  "theme_color": "#0175C2",
-  "description": "A new Flutter project.",
+  "background_color": "#F3F6FB",
+  "theme_color": "#214D8D",
+  "description": "推薦互動程式",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [
