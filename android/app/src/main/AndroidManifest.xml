@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="project9grid_app"
+        android:label="推薦互動程式"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
