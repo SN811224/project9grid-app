@@ -663,7 +663,7 @@ class Repo {
         .select()
         .eq('user_id', uid)
         .eq('prospect_id', prospectId)
-        .order('engaged_on', ascending: true);
+        .order('engaged_on', ascending: false);
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
@@ -1658,7 +1658,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
 
     final date = parseFormDate(contactedOn.text);
     if (date == null) {
-      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
+      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');
       return;
     }
 
@@ -1735,7 +1735,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       return;
                     }
                     if (parseFormDate(contactedOn.text) == null) {
-                      snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
+                      snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');
                       return;
                     }
                     Navigator.pop(context, true);
@@ -1757,7 +1757,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
     }
     final date = parseFormDate(contactedOn.text);
     if (date == null) {
-      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
+      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');
       return;
     }
 
@@ -3014,7 +3014,7 @@ class _ProspectDetailPageState extends State<ProspectDetailPage>{
                   return;
                 }
                 if (parseFormDate(when.text) == null) {
-                  snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
+                  snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');
                   return;
                 }
                 Navigator.pop(context, true);
@@ -3033,7 +3033,7 @@ class _ProspectDetailPageState extends State<ProspectDetailPage>{
     }
     final date=parseFormDate(when.text);
     if(date==null){
-      if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
+      if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');
       return;
     }
 
@@ -3452,7 +3452,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
     );
     if(saved!=true||content.text.trim().isEmpty)return;
     final date=parseFormDate(when.text);
-    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');return;}
+    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');return;}
     try{
       await repo.insert('recruitment_logs',{
         'recruitment_id':recruitmentId,
@@ -3483,7 +3483,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
                 return;
               }
               if (parseFormDate(when.text) == null) {
-                snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
+                snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');
                 return;
               }
               Navigator.pop(context, true);
@@ -3495,7 +3495,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
     );
     if(saved!=true||content.text.trim().isEmpty)return;
     final date=parseFormDate(when.text);
-    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');return;}
+    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD 或 YYYY/MM/DD');return;}
     await repo.update('recruitment_logs',row['id'].toString(),{
       'recruited_on':DateFormat('yyyy-MM-dd').format(date),
       'status_note':blank(status.text),'content':content.text.trim(),
