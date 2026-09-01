@@ -8,6 +8,7 @@ const supabaseKey = 'sb_publishable_vpgCkWsA2k69mh9Z2W__cg_Szbz4Iko';
 const navy = Color(0xFF214D8D);
 const bg = Color(0xFFF3F6FB);
 final ValueNotifier<int> shellIndexNotifier = ValueNotifier<int>(0);
+final ValueNotifier<int> prospectsRefreshNotifier = ValueNotifier<int>(0);
 const passwordRecoveryRedirect =
     'https://sn811224.github.io/project9grid-app/';
 
@@ -2308,6 +2309,9 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
     } else if (existing['status'] != '已轉客戶') {
       await repo.update('prospects', existing['id'].toString(), prospectValues);
     }
+
+    // 九宮格新增或修改推薦後，立即刷新「經營」名單。
+    prospectsRefreshNotifier.value++;
   }
 
   Future<void> edit([Map<String, dynamic>? row]) async {
