@@ -1656,9 +1656,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       return;
     }
 
-    final date = DateTime.tryParse(contactedOn.text.trim());
+    final date = parseFormDate(contactedOn.text);
     if (date == null) {
-      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD');
+      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
       return;
     }
 
@@ -1734,8 +1734,8 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                       snack(context, '請輸入聯絡內容');
                       return;
                     }
-                    if (DateTime.tryParse(contactedOn.text.trim()) == null) {
-                      snack(context, '日期格式請輸入 YYYY-MM-DD');
+                    if (parseFormDate(contactedOn.text) == null) {
+                      snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
                       return;
                     }
                     Navigator.pop(context, true);
@@ -1755,9 +1755,9 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       if (mounted) snack(context, '請輸入聯絡內容');
       return;
     }
-    final date = DateTime.tryParse(contactedOn.text.trim());
+    final date = parseFormDate(contactedOn.text);
     if (date == null) {
-      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD');
+      if (mounted) snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
       return;
     }
 
@@ -2972,7 +2972,7 @@ class _ProspectDetailPageState extends State<ProspectDetailPage>{
       ),
     );
     if(saved!=true||content.text.trim().isEmpty)return;
-    final date=DateTime.tryParse(when.text)??DateTime.now();
+    final date=parseFormDate(when.text)??DateTime.now();
     try{
       await repo.insert('engagement_logs',{
         'prospect_id':prospectId,
@@ -3013,8 +3013,8 @@ class _ProspectDetailPageState extends State<ProspectDetailPage>{
                   snack(context, '請輸入經營內容');
                   return;
                 }
-                if (DateTime.tryParse(when.text.trim()) == null) {
-                  snack(context, '日期格式請輸入 YYYY-MM-DD');
+                if (parseFormDate(when.text) == null) {
+                  snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
                   return;
                 }
                 Navigator.pop(context, true);
@@ -3031,9 +3031,9 @@ class _ProspectDetailPageState extends State<ProspectDetailPage>{
       if(mounted)snack(context,'請輸入經營內容');
       return;
     }
-    final date=DateTime.tryParse(when.text.trim());
+    final date=parseFormDate(when.text);
     if(date==null){
-      if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD');
+      if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
       return;
     }
 
@@ -3451,8 +3451,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
       ),
     );
     if(saved!=true||content.text.trim().isEmpty)return;
-    final date=DateTime.tryParse(when.text.trim());
-    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD');return;}
+    final date=parseFormDate(when.text);
+    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');return;}
     try{
       await repo.insert('recruitment_logs',{
         'recruitment_id':recruitmentId,
@@ -3482,8 +3482,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
                 snack(context, '請輸入增員內容');
                 return;
               }
-              if (DateTime.tryParse(when.text.trim()) == null) {
-                snack(context, '日期格式請輸入 YYYY-MM-DD');
+              if (parseFormDate(when.text) == null) {
+                snack(context, '日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');
                 return;
               }
               Navigator.pop(context, true);
@@ -3494,8 +3494,8 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
       ),
     );
     if(saved!=true||content.text.trim().isEmpty)return;
-    final date=DateTime.tryParse(when.text.trim());
-    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD');return;}
+    final date=parseFormDate(when.text);
+    if(date==null){if(mounted)snack(context,'日期格式請輸入 YYYY-MM-DD 或 YYYY/MM/DD');return;}
     await repo.update('recruitment_logs',row['id'].toString(),{
       'recruited_on':DateFormat('yyyy-MM-dd').format(date),
       'status_note':blank(status.text),'content':content.text.trim(),
@@ -4548,6 +4548,17 @@ String textOf(dynamic value) => value?.toString() ?? '';
 String? blank(String value) {
   final text = value.trim();
   return text.isEmpty ? null : text;
+}
+
+DateTime? parseFormDate(String raw) {
+  final value = raw.trim();
+  if (value.isEmpty) return null;
+
+  final normalized = value
+      .replaceAll('/', '-')
+      .replaceAll('.', '-');
+
+  return DateTime.tryParse(normalized);
 }
 
 String formatDateOnly(dynamic raw) {
