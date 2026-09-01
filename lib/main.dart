@@ -873,16 +873,27 @@ class _DashboardPageState extends State<DashboardPage>
         ? 0.0
         : filledSlots / (customers.length * gridCategories.length);
 
-    final upcoming = customers.where((row) {
+    // 壽星區間：本月全部 + 下個月 1～5 日；同時納入成交客戶與九宮格人脈。
+    final birthdayPool = <Map<String, dynamic>>[
+      ...customers.map((e) => {...e, '_birthday_source': '客戶'}),
+      ...contacts.map((e) => {...e, '_birthday_source': '九宮格'}),
+    ];
+    final nextMonth = now.month == 12 ? 1 : now.month + 1;
+    final upcoming = birthdayPool.where((row) {
       final raw = row['birthday']?.toString();
       final birthday = raw == null ? null : DateTime.tryParse(raw);
       if (birthday == null) return false;
-      var next = DateTime(now.year, birthday.month, birthday.day);
-      if (next.isBefore(DateTime(now.year, now.month, now.day))) {
-        next = DateTime(now.year + 1, birthday.month, birthday.day);
-      }
-      return next.difference(DateTime(now.year, now.month, now.day)).inDays <= 30;
-    }).toList();
+      return birthday.month == now.month ||
+          (birthday.month == nextMonth && birthday.day <= 5);
+    }).toList()
+      ..sort((a, b) {
+        final ad = DateTime.tryParse(a['birthday']?.toString() ?? '');
+        final bd = DateTime.tryParse(b['birthday']?.toString() ?? '');
+        if (ad == null || bd == null) return 0;
+        final ak = ad.month == now.month ? ad.day : 100 + ad.day;
+        final bk = bd.month == now.month ? bd.day : 100 + bd.day;
+        return ak.compareTo(bk);
+      });
 
     if (!mounted) return;
     setState(() {
@@ -957,21 +968,26 @@ class _DashboardPageState extends State<DashboardPage>
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.cake_outlined),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              birthdays.isEmpty
-                                  ? '30 天內沒有客戶生日'
-                                  : '30 天內有 ${birthdays.length} 位客戶生日',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 17,
+                          const Row(children: [
+                            Icon(Icons.cake_outlined),
+                            SizedBox(width: 12),
+                            Text('本月壽星', style: TextStyle(
+                              fontWeight: FontWeight.w900, fontSize: 17)),
+                          ]),
+                          const SizedBox(height: 10),
+                          if (birthdays.isEmpty)
+                            const Text('本月及下月 5 日前沒有壽星')
+                          else
+                            ...birthdays.map((b) => Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Text(
+                                '${nameWithRocBirthday(b['name'], b['birthday'])}  ・ ${textOf(b['_birthday_source'])}',
+                                style: const TextStyle(fontWeight: FontWeight.w700),
                               ),
-                            ),
-                          ),
+                            )),
                         ],
                       ),
                     ),
@@ -2021,35 +2037,72 @@ class _GridPageState extends State<GridPage>
       snack(context, '目前沒有成交客戶，請先到「客戶」新增');
       return;
     }
+    final search = TextEditingController();
     final picked = await showModalBottomSheet<String?>(
       context: context,
+      isScrollControlled: true,
       useSafeArea: true,
-      builder: (context) => ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(8),
-            child: Text('選擇成交客戶',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-          ),
-          ListTile(
-            leading: const Icon(Icons.clear),
-            title: const Text('清除選擇'),
-            onTap: () => Navigator.pop(context, ''),
-          ),
-          ...customers.map((c) => ListTile(
-            title: Text(textOf(c['name'])),
-            subtitle: Text([
-              textOf(c['occupation']),
-              textOf(c['company'])
-            ].where((e) => e.isNotEmpty).join('・')),
-            trailing: selectedCustomerId == c['id'].toString()
-                ? const Icon(Icons.check) : null,
-            onTap: () => Navigator.pop(context, c['id'].toString()),
-          )),
-        ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final q = search.text.trim().toLowerCase();
+          final filtered = customers.where((c) {
+            if (q.isEmpty) return true;
+            return textOf(c['name']).toLowerCase().contains(q) ||
+                textOf(c['phone']).toLowerCase().contains(q);
+          }).toList();
+          return SizedBox(
+            height: MediaQuery.of(context).size.height * .78,
+            child: Column(children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(children: [
+                  const Expanded(child: Text('選擇成交客戶',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900))),
+                  IconButton(onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close)),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: search,
+                  autofocus: true,
+                  onChanged: (_) => setSheetState(() {}),
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search),
+                    hintText: '搜尋姓名或電話',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.clear),
+                title: const Text('清除選擇'),
+                onTap: () => Navigator.pop(context, ''),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? const Center(child: Text('找不到符合的成交客戶'))
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final c = filtered[index];
+                          return ListTile(
+                            title: Text(nameWithRocBirthday(c['name'], c['birthday'])),
+                            subtitle: Text(textOf(c['phone'])),
+                            trailing: selectedCustomerId == c['id'].toString()
+                                ? const Icon(Icons.check) : null,
+                            onTap: () => Navigator.pop(context, c['id'].toString()),
+                          );
+                        },
+                      ),
+              ),
+            ]),
+          );
+        },
       ),
     );
+    search.dispose();
     if (picked == null) return;
     setState(() => selectedCustomerId = picked.isEmpty ? null : picked);
   }
@@ -2229,6 +2282,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
     final prospectValues = {
       'name': values['name'],
       'phone': values['phone'],
+      'birthday': values['birthday'],
       'occupation': values['occupation'],
       'company': values['company'],
       'notes': values['notes'],
@@ -2253,6 +2307,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
         : (row?['status']?.toString() ?? '未聯絡');
     final name = TextEditingController(text: textOf(row?['name']));
     final phone = TextEditingController(text: textOf(row?['phone']));
+    final birthday = TextEditingController(text: formatRocBirthday(row?['birthday']));
     final occupation = TextEditingController(text: textOf(row?['occupation']));
     final company = TextEditingController(text: textOf(row?['company']));
     final notes = TextEditingController(text: textOf(row?['notes']));
@@ -2276,6 +2331,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                     () => [
                       name.text,
                       phone.text,
+                      birthday.text,
                       occupation.text,
                       company.text,
                       notes.text,
@@ -2295,6 +2351,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                 const SizedBox(height: 18),
                 field(name, '姓名 *'),
                 field(phone, '手機'),
+                field(birthday, '生日（民國YYY-MM-DD）'),
                 field(occupation, '職業'),
                 field(company, '公司'),
                 DropdownButtonFormField<String>(
@@ -2349,7 +2406,22 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                   ),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () async {
+                    if (name.text.trim().isEmpty) {
+                      await showFormWarning(context, '姓名為必填欄位。');
+                      return;
+                    }
+                    if (!isValidPhoneInput(phone.text)) {
+                      await showFormWarning(context, '手機格式不正確，請重新輸入。');
+                      return;
+                    }
+                    if (normalizeBirthdayInput(birthday.text) == '__INVALID__') {
+                      await showFormWarning(context,
+                        '生日格式不正確。請輸入民國年，例如 81-12-24 或 081-12-24。');
+                      return;
+                    }
+                    if (context.mounted) Navigator.pop(context, true);
+                  },
                   child: const Text('儲存')),
               ],
             ),
@@ -2367,12 +2439,19 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
       await showFormWarning(context,'手機格式不正確，請重新輸入。');
       return;
     }
+    final normalizedBirthday = normalizeBirthdayInput(birthday.text);
+    if (normalizedBirthday == '__INVALID__') {
+      await showFormWarning(context,
+        '生日格式不正確。請輸入民國年，例如 81-12-24 或 081-12-24。');
+      return;
+    }
     final values = {
       'customer_id': widget.customerId,
       'name': name.text.trim(),
       'category': widget.category,
       'status': status ?? '未聯絡',
       'phone': blank(phone.text),
+      'birthday': normalizedBirthday,
       'occupation': blank(occupation.text),
       'company': blank(company.text),
       'notes': blank(notes.text),
@@ -2457,6 +2536,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
     final customer = await repo.insertReturning('customers', {
       'name': textOf(row['name']),
       'phone': row['phone'],
+      'birthday': row['birthday'],
       'occupation': row['occupation'],
       'company': row['company'],
       'notes': row['notes'],
@@ -2512,7 +2592,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                         children: [
                           Expanded(
                             child: Text(
-                              textOf(row['name']),
+                              nameWithRocBirthday(row['name'], row['birthday']),
                               style: const TextStyle(fontWeight: FontWeight.w900),
                             ),
                           ),

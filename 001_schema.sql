@@ -1,2 +1,0 @@
--- 此檔保存 Project 9Grid 3.0 已在 Supabase SQL Editor 執行的核心 schema。
--- 正式建議將先前執行的完整 SQL 複製到此檔，作為版本管理。
