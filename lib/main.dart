@@ -2088,8 +2088,7 @@ class _GridPageState extends State<GridPage>
                         itemBuilder: (context, index) {
                           final c = filtered[index];
                           return ListTile(
-                            title: Text(nameWithRocBirthday(c['name'], c['birthday'])),
-                            subtitle: Text(textOf(c['phone'])),
+                            title: Text(textOf(c['name'])),
                             trailing: selectedCustomerId == c['id'].toString()
                                 ? const Icon(Icons.check) : null,
                             onTap: () => Navigator.pop(context, c['id'].toString()),
