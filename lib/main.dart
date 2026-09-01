@@ -662,7 +662,7 @@ class Repo {
         .select()
         .eq('user_id', uid)
         .eq('prospect_id', prospectId)
-        .order('engaged_on', ascending: false);
+        .order('engaged_on', ascending: true);
     return (rows as List).cast<Map<String, dynamic>>();
   }
 
@@ -1728,7 +1728,17 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 const SizedBox(height: 12),
                 field(summary, '聯絡內容 *', maxLines: 5),
                 FilledButton.icon(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () {
+                    if (summary.text.trim().isEmpty) {
+                      snack(context, '請輸入聯絡內容');
+                      return;
+                    }
+                    if (DateTime.tryParse(contactedOn.text.trim()) == null) {
+                      snack(context, '日期格式請輸入 YYYY-MM-DD');
+                      return;
+                    }
+                    Navigator.pop(context, true);
+                  },
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('儲存修改'),
                 ),
@@ -2994,7 +3004,17 @@ class _ProspectDetailPageState extends State<ProspectDetailPage>{
             field(status,'目前經營狀況'),
             field(content,'經營備註 / 內容 *',maxLines:5),
             FilledButton.icon(
-              onPressed:()=>Navigator.pop(context,true),
+              onPressed: () {
+                if (content.text.trim().isEmpty) {
+                  snack(context, '請輸入經營內容');
+                  return;
+                }
+                if (DateTime.tryParse(when.text.trim()) == null) {
+                  snack(context, '日期格式請輸入 YYYY-MM-DD');
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
               icon:const Icon(Icons.save_outlined),
               label:const Text('儲存修改')),
           ]),
@@ -3452,7 +3472,20 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage>{
           const Text('修改增員紀錄',style:TextStyle(fontSize:24,fontWeight:FontWeight.w900)),
           const SizedBox(height:18),field(when,'增員日期（YYYY-MM-DD）'),
           field(status,'目前增員狀況'),field(content,'增員備註 / 內容 *',maxLines:5),
-          FilledButton(onPressed:()=>Navigator.pop(context,true),child:const Text('儲存修改')),
+          FilledButton(
+            onPressed: () {
+              if (content.text.trim().isEmpty) {
+                snack(context, '請輸入增員內容');
+                return;
+              }
+              if (DateTime.tryParse(when.text.trim()) == null) {
+                snack(context, '日期格式請輸入 YYYY-MM-DD');
+                return;
+              }
+              Navigator.pop(context, true);
+            },
+            child: const Text('儲存修改'),
+          ),
         ])),
       ),
     );
