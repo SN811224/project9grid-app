@@ -3840,6 +3840,28 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                 .toLowerCase()
                 .contains(k))
         .toList();
+
+    // 增員歷程顯示排序：日期新到舊，同一天後新增的在上面
+    filtered.sort((a, b) {
+      final dateA = parseAnyDate(a['recruited_on']) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final dateB = parseAnyDate(b['recruited_on']) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+
+      final dateResult = dateB.compareTo(dateA);
+      if (dateResult != 0) return dateResult;
+
+      final createdA = parseAnyDate(a['created_at']) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final createdB = parseAnyDate(b['created_at']) ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+
+      final createdResult = createdB.compareTo(createdA);
+      if (createdResult != 0) return createdResult;
+
+      return textOf(b['id']).compareTo(textOf(a['id']));
+    });
+
     return Scaffold(
       appBar: AppBar(title: Text(textOf(r['name']))),
       bottomNavigationBar: mainNavigationBar(context, 4),
