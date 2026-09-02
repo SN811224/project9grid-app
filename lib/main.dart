@@ -2877,12 +2877,22 @@ class _ProspectsPageState extends State<ProspectsPage>
           ? '經營中'
           : (row?['status']?.toString() ?? '經營中'),
     };
-    if (row == null) {
-      await repo.insert('prospects', values);
-    } else {
-      await repo.update('prospects', row['id'].toString(), values);
+    try {
+      if (row == null) {
+        await repo.insert('prospects', values);
+      } else {
+        await repo.update('prospects', row['id'].toString(), values);
+      }
+      await load();
+    } catch (e) {
+      if (context.mounted) {
+        await showFormWarning(
+          context,
+          '儲存失敗：$e',
+        );
+      }
+      return;
     }
-    await load();
   }
 
   @override
