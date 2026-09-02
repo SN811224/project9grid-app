@@ -3040,7 +3040,8 @@ class _ProspectsPageState extends State<ProspectsPage>
                                 final priorityValue =
                                     int.tryParse(textOf(row['priority'])) ?? 0;
                                 final starCount = priorityValue.clamp(0, 5);
-                                final stars = '★' * starCount;
+                                final stars =
+                                    List.filled(starCount, '★').join();
 
                                 return SizedBox(
                                   width: 105,
@@ -3048,30 +3049,43 @@ class _ProspectsPageState extends State<ProspectsPage>
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFE8EEF8),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          textOf(row['status']).isEmpty
-                                              ? '經營中'
-                                              : textOf(row['status']),
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
+                                      SizedBox(
+                                        height: 26,
+                                        child: Align(
+                                          alignment: Alignment.centerRight,
+                                          child: PopupMenuButton<String>(
+                                            padding: EdgeInsets.zero,
+                                            iconSize: 20,
+                                            onSelected: (v) async {
+                                              if (v == 'edit') {
+                                                await edit(row);
+                                              } else if (v == 'delete') {
+                                                await confirmDelete(context,
+                                                    () async {
+                                                  await repo.remove(
+                                                    'prospects',
+                                                    row['id'].toString(),
+                                                  );
+                                                  await load();
+                                                });
+                                              }
+                                            },
+                                            itemBuilder: (_) => const [
+                                              PopupMenuItem(
+                                                value: 'edit',
+                                                child: Text('編輯'),
+                                              ),
+                                              PopupMenuItem(
+                                                value: 'delete',
+                                                child: Text('刪除'),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                       ),
                                       if (starCount > 0)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 3),
+                                        Align(
+                                          alignment: Alignment.centerLeft,
                                           child: Text(
                                             stars,
                                             style: const TextStyle(
@@ -3080,37 +3094,6 @@ class _ProspectsPageState extends State<ProspectsPage>
                                             ),
                                           ),
                                         ),
-                                      SizedBox(
-                                        height: 26,
-                                        child: PopupMenuButton<String>(
-                                          padding: EdgeInsets.zero,
-                                          iconSize: 20,
-                                          onSelected: (v) async {
-                                            if (v == 'edit') {
-                                              await edit(row);
-                                            } else {
-                                              await confirmDelete(context,
-                                                  () async {
-                                                await repo.remove(
-                                                  'prospects',
-                                                  row['id'].toString(),
-                                                );
-                                                await load();
-                                              });
-                                            }
-                                          },
-                                          itemBuilder: (_) => const [
-                                            PopupMenuItem(
-                                              value: 'edit',
-                                              child: Text('編輯'),
-                                            ),
-                                            PopupMenuItem(
-                                              value: 'delete',
-                                              child: Text('刪除'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 );
