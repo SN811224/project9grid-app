@@ -2745,6 +2745,7 @@ class _ProspectsPageState extends State<ProspectsPage>
     final company = TextEditingController(text: textOf(row?['company']));
     final family = TextEditingController(text: textOf(row?['family_status']));
     final notes = TextEditingController(text: textOf(row?['notes']));
+    int priority = int.tryParse(textOf(row?['priority'])) ?? 0;
     String sourceType = textOf(row?['source_category']).isEmpty
         ? '自行新增'
         : textOf(row?['source_category']);
@@ -2869,6 +2870,7 @@ class _ProspectsPageState extends State<ProspectsPage>
       'source_category': sourceType,
       'referred_by_name':
           sourceType == '自行新增' ? '自行新增' : blank(referredBy.text),
+      'priority': priority,
       'notes': blank(notes.text),
       'status': row?['status']?.toString() == '已聯絡'
           ? '經營中'
