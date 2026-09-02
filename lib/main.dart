@@ -2798,7 +2798,7 @@ class _ProspectsPageState extends State<ProspectsPage>
           DropdownButtonFormField<int>(
             initialValue: priority >= 1 && priority <= 5 ? priority : null,
             decoration: const InputDecoration(
-              labelText: '優先度',
+              labelText: '成交機會',
               border: OutlineInputBorder(),
             ),
             items: List.generate(
@@ -2911,10 +2911,17 @@ class _ProspectsPageState extends State<ProspectsPage>
       return k.isEmpty || h.contains(k);
     }).toList()
       ..sort((a, b) {
+        final pa = int.tryParse(textOf(a['priority'])) ?? 0;
+        final pb = int.tryParse(textOf(b['priority'])) ?? 0;
+
+        final byPriority = pb.compareTo(pa);
+        if (byPriority != 0) return byPriority;
+
         final la = followUpLightFor(lastProgressFor(a));
         final lb = followUpLightFor(lastProgressFor(b));
         final byLight = followUpPriority(la).compareTo(followUpPriority(lb));
         if (byLight != 0) return byLight;
+
         final da = lastProgressFor(a) ?? DateTime.fromMillisecondsSinceEpoch(0);
         final db = lastProgressFor(b) ?? DateTime.fromMillisecondsSinceEpoch(0);
         return da.compareTo(db);
@@ -3025,28 +3032,90 @@ class _ProspectsPageState extends State<ProspectsPage>
                                 return Text([
                                   textOf(row['phone']),
                                   '來源：$referredByName',
-                                  if (starCount > 0) '優先度：$stars',
                                 ].where((e) => e.isNotEmpty).join('\n'));
                               },
                             ),
-                            trailing: PopupMenuButton<String>(
-                                onSelected: (v) async {
-                                  if (v == 'edit') {
-                                    await edit(row);
-                                  } else {
-                                    await confirmDelete(context, () async {
-                                      await repo.remove(
-                                          'prospects', row['id'].toString());
-                                      await load();
-                                    });
-                                  }
-                                },
-                                itemBuilder: (_) => const [
-                                      PopupMenuItem(
-                                          value: 'edit', child: Text('編輯')),
-                                      PopupMenuItem(
-                                          value: 'delete', child: Text('刪除')),
-                                    ]),
+                            trailing: Builder(
+                              builder: (context) {
+                                final priorityValue =
+                                    int.tryParse(textOf(row['priority'])) ?? 0;
+                                final starCount = priorityValue.clamp(0, 5);
+                                final stars = '★' * starCount;
+
+                                return SizedBox(
+                                  width: 105,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFE8EEF8),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          textOf(row['status']).isEmpty
+                                              ? '經營中'
+                                              : textOf(row['status']),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                      if (starCount > 0)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(top: 3),
+                                          child: Text(
+                                            stars,
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ),
+                                      SizedBox(
+                                        height: 26,
+                                        child: PopupMenuButton<String>(
+                                          padding: EdgeInsets.zero,
+                                          iconSize: 20,
+                                          onSelected: (v) async {
+                                            if (v == 'edit') {
+                                              await edit(row);
+                                            } else {
+                                              await confirmDelete(context,
+                                                  () async {
+                                                await repo.remove(
+                                                  'prospects',
+                                                  row['id'].toString(),
+                                                );
+                                                await load();
+                                              });
+                                            }
+                                          },
+                                          itemBuilder: (_) => const [
+                                            PopupMenuItem(
+                                              value: 'edit',
+                                              child: Text('編輯'),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Text('刪除'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ));
                         }))),
       ]),
