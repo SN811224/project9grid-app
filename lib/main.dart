@@ -2817,6 +2817,30 @@ class _ProspectsPageState extends State<ProspectsPage>
           ),
           const SizedBox(height: 12),
           if (sourceType != '自行新增') field(referredBy, '來源'),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            initialValue: priority >= 1 && priority <= 5 ? priority : null,
+            decoration: const InputDecoration(
+              labelText: '優先度',
+              border: OutlineInputBorder(),
+            ),
+            items: List.generate(
+              5,
+              (index) {
+                final value = index + 1;
+                return DropdownMenuItem<int>(
+                  value: value,
+                  child: Text(
+                    '${'★' * value}${'☆' * (5 - value)}',
+                  ),
+                );
+              },
+            ),
+            onChanged: (value) {
+              if (value != null) priority = value;
+            },
+          ),
+          const SizedBox(height: 12),
           field(notes, '備註', maxLines: 4),
           FilledButton(
               onPressed: () async {
