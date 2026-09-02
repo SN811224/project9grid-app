@@ -3094,13 +3094,20 @@ class _ProspectsPageState extends State<ProspectsPage>
                                                             '已成交'
                                                         ? const Color(
                                                             0xFFE5F4E9)
-                                                        : const Color(
-                                                            0xFFE8EEF8),
+                                                        : textOf(row[
+                                                                    'status']) ==
+                                                                '未聯絡'
+                                                            ? const Color(
+                                                                0xFFFFE5E5)
+                                                            : const Color(
+                                                                0xFFE8EEF9),
                                                 borderRadius:
                                                     BorderRadius.circular(16),
                                               ),
                                               child: Text(
-                                                textOf(row['status']),
+                                                textOf(row['status']).isEmpty
+                                                    ? '經營中'
+                                                    : textOf(row['status']),
                                                 style: TextStyle(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w800,
@@ -3112,7 +3119,12 @@ class _ProspectsPageState extends State<ProspectsPage>
                                                               '已成交'
                                                           ? Colors
                                                               .green.shade700
-                                                          : navy,
+                                                          : textOf(row[
+                                                                      'status']) ==
+                                                                  '未聯絡'
+                                                              ? Colors
+                                                                  .red.shade700
+                                                              : navy,
                                                 ),
                                               ),
                                             ),
