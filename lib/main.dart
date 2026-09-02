@@ -3460,7 +3460,9 @@ class _ProspectDetailPageState extends State<ProspectDetailPage> {
                         ? Colors.orange.shade800
                         : textOf(p['status']) == '已成交'
                             ? Colors.green.shade700
-                            : navy,
+                            : textOf(p['status']) == '未聯絡'
+                                ? Colors.red.shade700
+                                : navy,
                   ),
                 ),
               ),
