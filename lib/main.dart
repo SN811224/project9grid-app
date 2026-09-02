@@ -2723,6 +2723,15 @@ class _ProspectsPageState extends State<ProspectsPage>
     final family = TextEditingController(text: textOf(row?['family_status']));
     final notes = TextEditingController(text: textOf(row?['notes']));
     int priority = int.tryParse(textOf(row?['priority'])) ?? 0;
+
+    String status =
+        textOf(row?['status']).isEmpty ? '未聯絡' : textOf(row?['status']);
+
+    // 舊資料「待追蹤」自動轉成新名稱「待成交」
+    if (status == '待追蹤') {
+      status = '待成交';
+    }
+
     String sourceType = textOf(row?['source_category']).isEmpty
         ? '自行新增'
         : textOf(row?['source_category']);
@@ -2818,6 +2827,44 @@ class _ProspectsPageState extends State<ProspectsPage>
             },
           ),
           const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            value: [
+              '未聯絡',
+              '經營中',
+              '待成交',
+              '已成交',
+            ].contains(status)
+                ? status
+                : '未聯絡',
+            decoration: const InputDecoration(
+              labelText: '狀態',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: '未聯絡',
+                child: Text('未聯絡'),
+              ),
+              DropdownMenuItem(
+                value: '經營中',
+                child: Text('經營中'),
+              ),
+              DropdownMenuItem(
+                value: '待成交',
+                child: Text('待成交'),
+              ),
+              DropdownMenuItem(
+                value: '已成交',
+                child: Text('已成交'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                status = value;
+              }
+            },
+          ),
+          const SizedBox(height: 12),
           field(notes, '備註', maxLines: 4),
           FilledButton(
               onPressed: () async {
@@ -2873,9 +2920,7 @@ class _ProspectsPageState extends State<ProspectsPage>
           sourceType == '自行新增' ? '自行新增' : blank(referredBy.text),
       'priority': priority,
       'notes': blank(notes.text),
-      'status': row?['status']?.toString() == '已聯絡'
-          ? '經營中'
-          : (row?['status']?.toString() ?? '經營中'),
+      'status': status,
     };
     try {
       if (row == null) {
@@ -3021,7 +3066,7 @@ class _ProspectsPageState extends State<ProspectsPage>
                                               ),
                                               decoration: BoxDecoration(
                                                 color: textOf(row['status']) ==
-                                                        '待追蹤'
+                                                        '待成交'
                                                     ? const Color(0xFFFFF0DA)
                                                     : textOf(row['status']) ==
                                                             '已成交'
@@ -3039,7 +3084,7 @@ class _ProspectsPageState extends State<ProspectsPage>
                                                   fontWeight: FontWeight.w800,
                                                   color: textOf(
                                                               row['status']) ==
-                                                          '待追蹤'
+                                                          '待成交'
                                                       ? Colors.orange.shade800
                                                       : textOf(row['status']) ==
                                                               '已成交'
