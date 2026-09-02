@@ -1348,6 +1348,16 @@ class _CustomersPageState extends State<CustomersPage>
       return keyword.isEmpty || haystack.contains(keyword);
     }).toList()
       ..sort((a, b) {
+        // 第一順位：成交日期由新到舊
+        final closedA =
+            parseAnyDate(a['closed_date'] ?? a['created_at']) ?? DateTime(1970);
+        final closedB =
+            parseAnyDate(b['closed_date'] ?? b['created_at']) ?? DateTime(1970);
+        final closedCompare = closedB.compareTo(closedA);
+        if (closedCompare != 0) return closedCompare;
+
+        // 第二順位：同一天成交，再沿用原本燈號／追蹤天數規則
+
         final lightA = customerFollowUpLightFor(lastCustomerProgress(a));
         final lightB = customerFollowUpLightFor(lastCustomerProgress(b));
         final byLight =
