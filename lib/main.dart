@@ -1924,11 +1924,20 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ),
             ),
             ...policies.take(5).map(
-                  (e) => Card(
-                    child: ListTile(
-                      title: Text(textOf(e['product_name'])),
-                      subtitle: Text(
-                        '${textOf(e['insurer'])}・${textOf(e['payment_frequency'] ?? e['payment_method'])}',
+                  (e) => SizedBox(
+                    height: 92,
+                    child: Card(
+                      child: ListTile(
+                        title: Text(
+                          textOf(e['product_name']),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          '${textOf(e['insurer'])} · ${textOf(e['payment_frequency'] ?? e['payment_method'])}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),
@@ -1942,29 +1951,41 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               ),
             ...logs.map(
-              (e) => Card(
-                child: ListTile(
-                  onTap: () => editFollowLog(e),
-                  leading: const Icon(Icons.history),
-                  title: Text(textOf(e['summary'])),
-                  subtitle: Text(
-                    '${textOf(e['channel'])}・${formatDateOnly(e['contacted_at'])}',
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) async {
-                      if (value == 'edit') {
-                        await editFollowLog(e);
-                      } else if (value == 'delete') {
-                        await confirmDelete(context, () async {
-                          await repo.remove('follow_logs', e['id'].toString());
-                          await load();
-                        });
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('修改')),
-                      PopupMenuItem(value: 'delete', child: Text('刪除')),
-                    ],
+              (e) => SizedBox(
+                height: 92,
+                child: Card(
+                  child: ListTile(
+                    onTap: () => editFollowLog(e),
+                    leading: const Icon(Icons.history),
+                    title: Text(
+                      textOf(e['summary']),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${textOf(e['channel'])} · ${formatDateOnly(e['contacted_at'])}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (value) async {
+                        if (value == 'edit') {
+                          await editFollowLog(e);
+                        } else if (value == 'delete') {
+                          await confirmDelete(context, () async {
+                            await repo.remove(
+                              'follow_logs',
+                              e['id'].toString(),
+                            );
+                            await load();
+                          });
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('修改')),
+                        PopupMenuItem(value: 'delete', child: Text('刪除')),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -3518,15 +3539,25 @@ class _ProspectDetailPageState extends State<ProspectDetailPage> {
               const Card(
                   child: Padding(
                       padding: EdgeInsets.all(18), child: Text('尚無符合的經營紀錄'))),
-            ...filtered.map((e) => Card(
+            ...filtered.map((e) => SizedBox(
+                height: 92,
+                child: Card(
                     child: ListTile(
                   onTap: () => editLog(e),
                   leading: const Icon(Icons.history),
-                  title: Text(textOf(e['content'])),
-                  subtitle: Text([
-                    formatDateOnly(e['engaged_on'] ?? e['engaged_at']),
-                    textOf(e['status_note'])
-                  ].where((x) => x.isNotEmpty).join('\n')),
+                  title: Text(
+                    textOf(e['content']),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    [
+                      formatDateOnly(e['engaged_on'] ?? e['engaged_at']),
+                      textOf(e['status_note'])
+                    ].where((x) => x.isNotEmpty).join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) async {
                       if (value == 'edit') {
@@ -3544,7 +3575,7 @@ class _ProspectDetailPageState extends State<ProspectDetailPage> {
                       PopupMenuItem(value: 'delete', child: Text('刪除')),
                     ],
                   ),
-                ))),
+                )))),
           ]),
     );
   }
@@ -4111,15 +4142,25 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
               const Card(
                   child: Padding(
                       padding: EdgeInsets.all(18), child: Text('尚無符合的增員紀錄'))),
-            ...filtered.map((e) => Card(
+            ...filtered.map((e) => SizedBox(
+                height: 92,
+                child: Card(
                     child: ListTile(
                   onTap: () => editLog(e),
                   leading: const Icon(Icons.history),
-                  title: Text(textOf(e['content'])),
-                  subtitle: Text([
-                    formatDateOnly(e['recruited_on']),
-                    textOf(e['status_note'])
-                  ].where((x) => x.isNotEmpty).join('\n')),
+                  title: Text(
+                    textOf(e['content']),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    [
+                      formatDateOnly(e['recruited_on']),
+                      textOf(e['status_note'])
+                    ].where((x) => x.isNotEmpty).join(' · '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   trailing: PopupMenuButton<String>(
                       onSelected: (v) async {
                         if (v == 'edit')
@@ -4135,7 +4176,7 @@ class _RecruitmentDetailPageState extends State<RecruitmentDetailPage> {
                             PopupMenuItem(value: 'edit', child: Text('修改')),
                             PopupMenuItem(value: 'delete', child: Text('刪除')),
                           ]),
-                ))),
+                )))),
           ]),
     );
   }
