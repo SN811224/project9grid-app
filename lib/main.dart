@@ -2614,7 +2614,9 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                                   ? const Color(0xFFE5F4E9)
                                   : textOf(row['status']) == '待成交'
                                       ? const Color(0xFFFFF0DA)
-                                      : const Color(0xFFE8EEF9),
+                                      : textOf(row['status']) == '未聯絡'
+                                          ? const Color(0xFFFFE5E5)
+                                          : const Color(0xFFE8EEF9),
                               borderRadius: BorderRadius.circular(18),
                             ),
                             child: Text(
@@ -2627,7 +2629,9 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                                         ? Colors.green.shade700
                                         : textOf(row['status']) == '待成交'
                                             ? Colors.orange.shade800
-                                            : navy,
+                                            : textOf(row['status']) == '未聯絡'
+                                                ? Colors.red.shade700
+                                                : navy,
                               ),
                             ),
                           ),
