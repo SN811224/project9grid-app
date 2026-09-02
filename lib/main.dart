@@ -3004,56 +3004,78 @@ class _ProspectsPageState extends State<ProspectsPage>
                                         List.filled(statusStarCount, '★')
                                             .join();
 
-                                    return Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: textOf(row['status']) ==
-                                                    '待追蹤'
-                                                ? const Color(0xFFFFF0DA)
-                                                : textOf(row['status']) == '已成交'
-                                                    ? const Color(0xFFE5F4E9)
-                                                    : const Color(0xFFE8EEF8),
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                          ),
-                                          child: Text(
-                                            textOf(row['status']),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: textOf(row['status']) ==
-                                                      '待追蹤'
-                                                  ? Colors.orange.shade800
-                                                  : textOf(row['status']) ==
-                                                          '已成交'
-                                                      ? Colors.green.shade700
-                                                      : navy,
-                                            ),
-                                          ),
-                                        ),
-                                        if (statusStarCount > 0)
-                                          Padding(
-                                            padding: const EdgeInsets.only(
-                                              top: 3,
-                                              left: 8,
-                                            ),
-                                            child: Text(
-                                              statusStars,
-                                              style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w800,
+                                    return SizedBox(
+                                      width: 92,
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 3,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: textOf(row['status']) ==
+                                                        '待追蹤'
+                                                    ? const Color(0xFFFFF0DA)
+                                                    : textOf(row['status']) ==
+                                                            '已成交'
+                                                        ? const Color(
+                                                            0xFFE5F4E9)
+                                                        : const Color(
+                                                            0xFFE8EEF8),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              child: Text(
+                                                textOf(row['status']),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: textOf(
+                                                              row['status']) ==
+                                                          '待追蹤'
+                                                      ? Colors.orange.shade800
+                                                      : textOf(row['status']) ==
+                                                              '已成交'
+                                                          ? Colors
+                                                              .green.shade700
+                                                          : navy,
+                                                ),
                                               ),
                                             ),
                                           ),
-                                      ],
+                                          if (statusStarCount > 0)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  top: 3, right: 6),
+                                              child: SizedBox(
+                                                width: 86,
+                                                child: Align(
+                                                  alignment:
+                                                      Alignment.centerRight,
+                                                  child: Text(
+                                                    statusStars,
+                                                    textAlign: TextAlign.right,
+                                                    maxLines: 1,
+                                                    softWrap: false,
+                                                    style: const TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      height: 1,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     );
                                   },
                                 ),
