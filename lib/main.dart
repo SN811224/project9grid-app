@@ -2431,7 +2431,9 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                             ? Colors.green.shade700
                             : status == '待成交'
                                 ? Colors.orange.shade800
-                                : navy,
+                                : status == '未聯絡'
+                                    ? Colors.red.shade700
+                                    : navy,
                       ),
                     ),
                   ),
