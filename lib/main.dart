@@ -1212,8 +1212,6 @@ class _CustomersPageState extends State<CustomersPage>
     final family = TextEditingController(text: textOf(row?['family_status']));
     final premium = TextEditingController(text: textOf(row?['annual_premium']));
     final notes = TextEditingController(text: textOf(row?['notes']));
-    int priority = int.tryParse(textOf(row?['priority'])) ?? 3;
-
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -1266,26 +1264,6 @@ class _CustomersPageState extends State<CustomersPage>
                   '年繳保費',
                   keyboardType: TextInputType.number,
                 ),
-                DropdownButtonFormField<int>(
-                  initialValue: priority,
-                  decoration: const InputDecoration(
-                    labelText: '優先度',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: List.generate(
-                    5,
-                    (index) => DropdownMenuItem(
-                      value: index + 1,
-                      child: Text('${index + 1} 星'),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setSheetState(() => priority = value);
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
                 field(notes, '備註', maxLines: 3),
                 FilledButton(
                   onPressed: () async {
@@ -1343,7 +1321,6 @@ class _CustomersPageState extends State<CustomersPage>
       'company': blank(company.text),
       'family_status': blank(family.text),
       'annual_premium': double.tryParse(premium.text) ?? 0,
-      'priority': priority,
       'notes': blank(notes.text),
       'closed_date': row?['closed_date'] ??
           DateTime.now().toIso8601String().split('T').first,
