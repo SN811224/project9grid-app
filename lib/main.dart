@@ -1666,8 +1666,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
         'customer_id': customerId,
         'channel': channel,
         'summary': summary.text.trim(),
-        'contacted_at':
-            DateTime(
+        'contacted_at': DateTime(
           date.year,
           date.month,
           date.day,
@@ -3002,10 +3001,21 @@ class _ProspectsPageState extends State<ProspectsPage>
                                 ),
                               ],
                             ]),
-                            subtitle: Text([
-                              textOf(row['phone']),
-                              '來源：$referredByName',
-                            ].where((e) => e.isNotEmpty).join('\n')),
+                            subtitle: Builder(
+                              builder: (context) {
+                                final priorityValue =
+                                    int.tryParse(textOf(row['priority'])) ?? 0;
+                                final starCount = priorityValue.clamp(0, 5);
+                                final stars =
+                                    '★' * starCount + '☆' * (5 - starCount);
+
+                                return Text([
+                                  textOf(row['phone']),
+                                  '來源：$referredByName',
+                                  if (starCount > 0) '優先度：$stars',
+                                ].where((e) => e.isNotEmpty).join('\n'));
+                              },
+                            ),
                             trailing: PopupMenuButton<String>(
                                 onSelected: (v) async {
                                   if (v == 'edit') {
@@ -3090,8 +3100,7 @@ class _ProspectDetailPageState extends State<ProspectDetailPage> {
       await repo.insert('engagement_logs', {
         'prospect_id': prospectId,
         'engaged_on': DateFormat('yyyy-MM-dd').format(date),
-        'engaged_at':
-            DateTime(
+        'engaged_at': DateTime(
           date.year,
           date.month,
           date.day,
