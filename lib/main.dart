@@ -2993,31 +2993,69 @@ class _ProspectsPageState extends State<ProspectsPage>
                               ),
                               if (textOf(row['status']).isNotEmpty) ...[
                                 const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: textOf(row['status']) == '待追蹤'
-                                        ? const Color(0xFFFFF0DA)
-                                        : textOf(row['status']) == '已成交'
-                                            ? const Color(0xFFE5F4E9)
-                                            : const Color(0xFFE8EEF9),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    textOf(row['status']),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                      color: textOf(row['status']) == '待追蹤'
-                                          ? Colors.orange.shade800
-                                          : textOf(row['status']) == '已成交'
-                                              ? Colors.green.shade700
-                                              : navy,
-                                    ),
-                                  ),
+                                Builder(
+                                  builder: (context) {
+                                    final statusPriorityValue =
+                                        int.tryParse(textOf(row['priority'])) ??
+                                            0;
+                                    final statusStarCount =
+                                        statusPriorityValue.clamp(0, 5);
+                                    final statusStars =
+                                        List.filled(statusStarCount, '★')
+                                            .join();
+
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 3,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: textOf(row['status']) ==
+                                                    '待追蹤'
+                                                ? const Color(0xFFFFF0DA)
+                                                : textOf(row['status']) == '已成交'
+                                                    ? const Color(0xFFE5F4E9)
+                                                    : const Color(0xFFE8EEF8),
+                                            borderRadius:
+                                                BorderRadius.circular(16),
+                                          ),
+                                          child: Text(
+                                            textOf(row['status']),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: textOf(row['status']) ==
+                                                      '待追蹤'
+                                                  ? Colors.orange.shade800
+                                                  : textOf(row['status']) ==
+                                                          '已成交'
+                                                      ? Colors.green.shade700
+                                                      : navy,
+                                            ),
+                                          ),
+                                        ),
+                                        if (statusStarCount > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              top: 3,
+                                              left: 8,
+                                            ),
+                                            child: Text(
+                                              statusStars,
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w800,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ],
                             ]),
@@ -3035,69 +3073,32 @@ class _ProspectsPageState extends State<ProspectsPage>
                                 ].where((e) => e.isNotEmpty).join('\n'));
                               },
                             ),
-                            trailing: Builder(
-                              builder: (context) {
-                                final priorityValue =
-                                    int.tryParse(textOf(row['priority'])) ?? 0;
-                                final starCount = priorityValue.clamp(0, 5);
-                                final stars =
-                                    List.filled(starCount, '★').join();
-
-                                return SizedBox(
-                                  width: 105,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      SizedBox(
-                                        height: 26,
-                                        child: Align(
-                                          alignment: Alignment.centerRight,
-                                          child: PopupMenuButton<String>(
-                                            padding: EdgeInsets.zero,
-                                            iconSize: 20,
-                                            onSelected: (v) async {
-                                              if (v == 'edit') {
-                                                await edit(row);
-                                              } else if (v == 'delete') {
-                                                await confirmDelete(context,
-                                                    () async {
-                                                  await repo.remove(
-                                                    'prospects',
-                                                    row['id'].toString(),
-                                                  );
-                                                  await load();
-                                                });
-                                              }
-                                            },
-                                            itemBuilder: (_) => const [
-                                              PopupMenuItem(
-                                                value: 'edit',
-                                                child: Text('編輯'),
-                                              ),
-                                              PopupMenuItem(
-                                                value: 'delete',
-                                                child: Text('刪除'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      if (starCount > 0)
-                                        Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Text(
-                                            stars,
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                );
+                            trailing: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              iconSize: 20,
+                              onSelected: (v) async {
+                                if (v == 'edit') {
+                                  await edit(row);
+                                } else if (v == 'delete') {
+                                  await confirmDelete(context, () async {
+                                    await repo.remove(
+                                      'prospects',
+                                      row['id'].toString(),
+                                    );
+                                    await load();
+                                  });
+                                }
                               },
+                              itemBuilder: (_) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('編輯'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('刪除'),
+                                ),
+                              ],
                             ),
                           ));
                         }))),
