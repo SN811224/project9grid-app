@@ -2371,7 +2371,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                   items: const [
                     DropdownMenuItem(value: '未聯絡', child: Text('未聯絡')),
                     DropdownMenuItem(value: '經營中', child: Text('經營中')),
-                    DropdownMenuItem(value: '待追蹤', child: Text('待追蹤')),
+                    DropdownMenuItem(value: '待成交', child: Text('待成交')),
                     DropdownMenuItem(value: '已成交', child: Text('已成交')),
                   ],
                   onChanged: (value) => setSheetState(() => status = value),
@@ -2385,7 +2385,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                     decoration: BoxDecoration(
                       color: status == '已成交'
                           ? const Color(0xFFE5F4E9)
-                          : status == '待追蹤'
+                          : status == '待成交'
                               ? const Color(0xFFFFF0DA)
                               : const Color(0xFFE8EEF9),
                       borderRadius: BorderRadius.circular(18),
@@ -2396,7 +2396,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                         fontWeight: FontWeight.w800,
                         color: status == '已成交'
                             ? Colors.green.shade700
-                            : status == '待追蹤'
+                            : status == '待成交'
                                 ? Colors.orange.shade800
                                 : navy,
                       ),
@@ -2612,7 +2612,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                             decoration: BoxDecoration(
                               color: converted || textOf(row['status']) == '已成交'
                                   ? const Color(0xFFE5F4E9)
-                                  : textOf(row['status']) == '待追蹤'
+                                  : textOf(row['status']) == '待成交'
                                       ? const Color(0xFFFFF0DA)
                                       : const Color(0xFFE8EEF9),
                               borderRadius: BorderRadius.circular(18),
@@ -2625,7 +2625,7 @@ class _ContactCategoryPageState extends State<ContactCategoryPage> {
                                 color:
                                     converted || textOf(row['status']) == '已成交'
                                         ? Colors.green.shade700
-                                        : textOf(row['status']) == '待追蹤'
+                                        : textOf(row['status']) == '待成交'
                                             ? Colors.orange.shade800
                                             : navy,
                               ),
@@ -2727,8 +2727,8 @@ class _ProspectsPageState extends State<ProspectsPage>
     String status =
         textOf(row?['status']).isEmpty ? '未聯絡' : textOf(row?['status']);
 
-    // 舊資料「待追蹤」自動轉成新名稱「待成交」
-    if (status == '待追蹤') {
+    // 舊資料「待成交」自動轉成新名稱「待成交」
+    if (status == '待成交') {
       status = '待成交';
     }
 
@@ -2927,6 +2927,18 @@ class _ProspectsPageState extends State<ProspectsPage>
         await repo.insert('prospects', values);
       } else {
         await repo.update('prospects', row['id'].toString(), values);
+
+        // 經營名單狀態同步回九宮格原始人脈
+        final sourceContactId = textOf(row['source_contact_id']);
+        if (sourceContactId.isNotEmpty) {
+          await repo.update(
+            'contacts',
+            sourceContactId,
+            {
+              'status': status,
+            },
+          );
+        }
       }
       await load();
     } catch (e) {
@@ -3434,7 +3446,7 @@ class _ProspectDetailPageState extends State<ProspectDetailPage> {
                   textOf(p['status']).isEmpty ? '未聯絡' : textOf(p['status']),
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    color: textOf(p['status']) == '待追蹤'
+                    color: textOf(p['status']) == '待成交'
                         ? Colors.orange.shade800
                         : textOf(p['status']) == '已成交'
                             ? Colors.green.shade700
@@ -4950,7 +4962,7 @@ class _ReferralTreePageState extends State<ReferralTreePage> {
                       : textOf(referral['status']),
                   textOf(referral['status']) == '已成交'
                       ? Colors.green
-                      : textOf(referral['status']) == '待追蹤'
+                      : textOf(referral['status']) == '待成交'
                           ? Colors.orange
                           : const Color(0xFF315A9B),
                 ),
