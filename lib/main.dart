@@ -4,13 +4,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/data/repo.dart';
 import 'core/widgets/common_widgets.dart';
 import 'features/customers/customers_page.dart';
+import 'features/gifts/gift_management_page.dart';
+import 'core/navigation/shell_navigation.dart';
 
 const supabaseUrl = 'https://vgmtonkdgikpfnlkskqm.supabase.co';
 const supabaseKey = 'sb_publishable_vpgCkWsA2k69mh9Z2W__cg_Szbz4Iko';
 
 const navy = Color(0xFF214D8D);
 const bg = Color(0xFFF3F6FB);
-final ValueNotifier<int> shellIndexNotifier = ValueNotifier<int>(0);
+
 final ValueNotifier<int> prospectsRefreshNotifier = ValueNotifier<int>(0);
 const passwordRecoveryRedirect = 'https://sn811224.github.io/project9grid-app/';
 
@@ -820,6 +822,29 @@ class _DashboardPageState extends State<DashboardPage>
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const GiftManagementPage(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.card_giftcard_rounded),
+                      label: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        child: Text(
+                          '送禮管理',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Card(

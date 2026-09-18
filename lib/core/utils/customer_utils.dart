@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../navigation/shell_navigation.dart';
 
 DateTime? parseAnyDate(dynamic raw) {
   if (raw == null) return null;
@@ -153,36 +154,36 @@ NavigationBar mainNavigationBar(
 ) {
   return NavigationBar(
     selectedIndex: currentIndex,
-    onDestinationSelected: (index) {
-      if (index == currentIndex) return;
+    height: 72,
+    onDestinationSelected: (value) {
+      shellIndexNotifier.value = value;
 
-      // 目前先保留導覽列 UI。
-      // 各頁實際跳轉之後再統一接回 Shell。
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).popUntil(
+          (route) => route.isFirst,
+        );
+      }
     },
     destinations: const [
       NavigationDestination(
-        icon: Icon(Icons.dashboard_outlined),
-        selectedIcon: Icon(Icons.dashboard),
+        icon: Icon(Icons.home),
         label: '首頁',
       ),
       NavigationDestination(
-        icon: Icon(Icons.people_outline),
-        selectedIcon: Icon(Icons.people),
+        icon: Icon(Icons.people),
         label: '客戶',
       ),
       NavigationDestination(
-        icon: Icon(Icons.grid_view_outlined),
-        selectedIcon: Icon(Icons.grid_view),
+        icon: Icon(Icons.grid_view),
         label: '九宮格',
       ),
       NavigationDestination(
-        icon: Icon(Icons.person_add_alt_outlined),
-        selectedIcon: Icon(Icons.person_add_alt_1),
-        label: '增員',
+        icon: Icon(Icons.handshake_outlined),
+        label: '經營',
       ),
       NavigationDestination(
-        icon: Icon(Icons.more_horiz),
-        label: '更多',
+        icon: Icon(Icons.group_add_outlined),
+        label: '增員',
       ),
     ],
   );

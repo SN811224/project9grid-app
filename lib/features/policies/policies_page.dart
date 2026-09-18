@@ -193,6 +193,10 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
         : (textOf(row?['payment_method']).isNotEmpty
             ? textOf(row?['payment_method'])
             : '年繳');
+
+    String policyStatus = textOf(row?['policy_status']).isNotEmpty
+        ? textOf(row?['policy_status'])
+        : '有效';
     final premium = TextEditingController(
         text: textOf(row?['premium_amount']).isNotEmpty
             ? textOf(row?['premium_amount'])
@@ -270,13 +274,34 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
                       initialValue: frequency,
                       decoration: const InputDecoration(
                           labelText: '主約繳費方式', border: OutlineInputBorder()),
-                      items: const ['年繳', '半年繳', '季繳', '月繳']
+                      items: const ['年繳', '半年繳', '季繳', '月繳', '躉繳']
                           .map(
                               (e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       onChanged: (v) {
                         if (v != null) setSheet(() => frequency = v);
                       }),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: policyStatus,
+                    decoration: const InputDecoration(
+                      labelText: '保單狀態',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const ['有效', '失效', '解約', '滿期']
+                        .map(
+                          (e) => DropdownMenuItem(
+                            value: e,
+                            child: Text(e),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setSheet(() => policyStatus = v);
+                      }
+                    },
+                  ),
                   const SizedBox(height: 12),
                   field(premium, premiumLabel(frequency),
                       keyboardType: TextInputType.number),
@@ -340,7 +365,7 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
                                 decoration: const InputDecoration(
                                     labelText: '附約繳費方式',
                                     border: OutlineInputBorder()),
-                                items: const ['年繳', '半年繳', '季繳', '月繳']
+                                items: const ['年繳', '半年繳', '季繳', '月繳', '躉繳']
                                     .map((e) => DropdownMenuItem(
                                         value: e, child: Text(e)))
                                     .toList(),
@@ -375,6 +400,7 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
       'insurer': insurer,
       'payment_frequency': frequency,
       'payment_method': frequency,
+      'policy_status': policyStatus,
       'premium_amount': amount,
       'annual_premium': annualized(amount, frequency),
       'coverage_amount': double.tryParse(coverage.text) ?? 0,
