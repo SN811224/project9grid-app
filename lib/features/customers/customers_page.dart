@@ -361,6 +361,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   final repo = Repo();
   List<Map<String, dynamic>> contacts = [];
   List<Map<String, dynamic>> policies = [];
+  List<Map<String, dynamic>> policyRiders = [];
   List<Map<String, dynamic>> logs = [];
   List<Map<String, dynamic>> engagementHistory = [];
 
@@ -375,6 +376,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   Future<void> load() async {
     final allContacts = await repo.list('contacts');
     final allPolicies = await repo.policies();
+    final allPolicyRiders = await repo.list('policy_riders');
     final allLogs = await repo.followLogs(customerId);
     final sourceProspectId = textOf(widget.customer['source_prospect_id']);
     final oldEngagement = sourceProspectId.isEmpty
@@ -388,9 +390,216 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
       policies = allPolicies
           .where((e) => e['customer_id']?.toString() == customerId)
           .toList();
+
+      final policyIds = policies
+          .map((e) => e['id']?.toString() ?? '')
+          .where((id) => id.isNotEmpty)
+          .toSet();
+
+      policyRiders = allPolicyRiders
+          .where(
+            (e) => policyIds.contains(
+              e['policy_id']?.toString() ?? '',
+            ),
+          )
+          .toList();
+
       logs = allLogs;
       engagementHistory = oldEngagement;
     });
+  }
+
+  double premiumNumber(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double annualizePremium(double amount, String frequency) {
+    switch (frequency) {
+      case '半年繳':
+        return amount * 2;
+      case '季繳':
+        return amount * 4;
+      case '月繳':
+        return amount * 12;
+      case '躉繳':
+        return 0;
+      default:
+        return amount;
+    }
+  }
+
+  bool isActivePolicy(Map<String, dynamic> policy) {
+    final status = policy['policy_status']?.toString().trim() ?? '';
+    return status.isEmpty || status == '有效';
+  }
+
+  double get syncedAnnualPremiumTwd {
+    double total = 0;
+
+    final activePolicyIds = <String>{};
+
+    for (final policy in policies) {
+      if (!isActivePolicy(policy)) continue;
+
+      final policyId = policy['id']?.toString() ?? '';
+      if (policyId.isNotEmpty) {
+        activePolicyIds.add(policyId);
+      }
+
+      final frequency =
+          policy['payment_frequency']?.toString().trim().isNotEmpty == true
+              ? policy['payment_frequency'].toString()
+              : '年繳';
+
+      if (frequency == '躉繳') continue;
+
+      final storedTwd = premiumNumber(
+        policy['annual_premium_twd'],
+      );
+
+      if (storedTwd > 0) {
+        total += storedTwd;
+        continue;
+      }
+
+      final amount = premiumNumber(
+        policy['premium_amount'],
+      );
+
+      final rate = premiumNumber(
+                policy['exchange_rate'],
+              ) >
+              0
+          ? premiumNumber(policy['exchange_rate'])
+          : 1.0;
+
+      total += annualizePremium(
+        amount * rate,
+        frequency,
+      );
+    }
+
+    for (final rider in policyRiders) {
+      final policyId = rider['policy_id']?.toString() ?? '';
+
+      if (!activePolicyIds.contains(policyId)) {
+        continue;
+      }
+
+      final frequency =
+          rider['payment_frequency']?.toString().trim().isNotEmpty == true
+              ? rider['payment_frequency'].toString()
+              : '年繳';
+
+      if (frequency == '躉繳') continue;
+
+      final storedTwd = premiumNumber(
+        rider['annual_premium_twd'],
+      );
+
+      if (storedTwd > 0) {
+        total += storedTwd;
+        continue;
+      }
+
+      final amount = premiumNumber(
+        rider['premium_amount'],
+      );
+
+      final rate = premiumNumber(
+                rider['exchange_rate'],
+              ) >
+              0
+          ? premiumNumber(rider['exchange_rate'])
+          : 1.0;
+
+      total += annualizePremium(
+        amount * rate,
+        frequency,
+      );
+    }
+
+    return total;
+  }
+
+  double get syncedLumpSumTwd {
+    double total = 0;
+
+    final activePolicyIds = <String>{};
+
+    for (final policy in policies) {
+      if (!isActivePolicy(policy)) continue;
+
+      final policyId = policy['id']?.toString() ?? '';
+      if (policyId.isNotEmpty) {
+        activePolicyIds.add(policyId);
+      }
+
+      final frequency =
+          policy['payment_frequency']?.toString().trim().isNotEmpty == true
+              ? policy['payment_frequency'].toString()
+              : '年繳';
+
+      if (frequency != '躉繳') continue;
+
+      final storedTwd = premiumNumber(policy['lump_sum_twd']);
+
+      if (storedTwd > 0) {
+        total += storedTwd;
+        continue;
+      }
+
+      final amount = premiumNumber(policy['premium_amount']);
+
+      final rate = premiumNumber(
+                policy['exchange_rate'],
+              ) >
+              0
+          ? premiumNumber(policy['exchange_rate'])
+          : 1.0;
+
+      total += amount * rate;
+    }
+
+    for (final rider in policyRiders) {
+      final policyId = rider['policy_id']?.toString() ?? '';
+
+      if (!activePolicyIds.contains(policyId)) {
+        continue;
+      }
+
+      final frequency =
+          rider['payment_frequency']?.toString().trim().isNotEmpty == true
+              ? rider['payment_frequency'].toString()
+              : '年繳';
+
+      if (frequency != '躉繳') continue;
+
+      final storedTwd = premiumNumber(rider['lump_sum_twd']);
+
+      if (storedTwd > 0) {
+        total += storedTwd;
+        continue;
+      }
+
+      final amount = premiumNumber(rider['premium_amount']);
+
+      final rate = premiumNumber(
+                rider['exchange_rate'],
+              ) >
+              0
+          ? premiumNumber(rider['exchange_rate'])
+          : 1.0;
+
+      total += amount * rate;
+    }
+
+    return total;
+  }
+
+  String formatPremiumTwd(double value) {
+    return 'NT\$${NumberFormat.decimalPattern('zh_TW').format(value.round())}';
   }
 
   DateTime? get customerLastContact {
@@ -660,7 +869,16 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
   Widget build(BuildContext context) {
     final c = widget.customer;
     return Scaffold(
-      appBar: AppBar(title: Text(textOf(c['name']))),
+      appBar: AppBar(
+        title: Text(textOf(c['name'])),
+        actions: [
+          IconButton(
+            tooltip: '重新整理經營紀錄',
+            icon: const Icon(Icons.refresh),
+            onPressed: load,
+          ),
+        ],
+      ),
       bottomNavigationBar: mainNavigationBar(context, 1),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: addFollowLog,
@@ -686,7 +904,14 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                     infoRow('職業', textOf(c['occupation'])),
                     infoRow('公司', textOf(c['company'])),
                     infoRow('家庭', textOf(c['family_status'])),
-                    infoRow('年繳保費', textOf(c['annual_premium'])),
+                    infoRow(
+                      '年繳保費',
+                      formatPremiumTwd(syncedAnnualPremiumTwd),
+                    ),
+                    infoRow(
+                      '躉繳累計',
+                      formatPremiumTwd(syncedLumpSumTwd),
+                    ),
                     infoRow('備註', textOf(c['notes'])),
                   ],
                 ),
@@ -745,6 +970,72 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
               ],
             ),
             if (engagementHistory.isNotEmpty) ...[
+              sectionTitle('聯絡紀錄'),
+              if (logs.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(18),
+                    child: Text('尚無聯絡紀錄'),
+                  ),
+                ),
+              ...logs.map(
+                (e) => SizedBox(
+                  height: 92,
+                  child: Card(
+                    child: ListTile(
+                      onTap: () => editFollowLog(e),
+                      leading: const Icon(Icons.history),
+                      title: Text(
+                        textOf(e['summary']),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${textOf(e['channel'])} · ${formatDateOnly(e['contacted_at'])}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) async {
+                          if (value == 'edit') {
+                            await editFollowLog(e);
+                          } else if (value == 'delete') {
+                            await confirmDelete(context, () async {
+                              await repo.remove(
+                                'follow_logs',
+                                e['id'].toString(),
+                              );
+                              await load();
+                            });
+                          }
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('修改')),
+                          PopupMenuItem(value: 'delete', child: Text('刪除')),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              sectionTitle('保單 ${policies.length} 張'),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.folder_copy_outlined),
+                  title: const Text('查看／新增／修改全部保單'),
+                  subtitle: Text('目前共 ${policies.length} 張保單'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => CustomerPoliciesPage(customer: c),
+                      ),
+                    );
+                    await load();
+                  },
+                ),
+              ),
               sectionTitle('成交前經營紀錄 ${engagementHistory.length} 筆'),
               ...engagementHistory.map(
                 (e) => Card(
@@ -759,91 +1050,6 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               ),
             ],
-            sectionTitle('保單 ${policies.length} 張'),
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.folder_copy_outlined),
-                title: const Text('查看／新增／修改全部保單'),
-                subtitle: Text('目前共 ${policies.length} 張保單'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => CustomerPoliciesPage(customer: c),
-                    ),
-                  );
-                  await load();
-                },
-              ),
-            ),
-            ...policies.take(5).map(
-                  (e) => SizedBox(
-                    height: 92,
-                    child: Card(
-                      child: ListTile(
-                        title: Text(
-                          textOf(e['product_name']),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          '${textOf(e['insurer'])} · ${textOf(e['payment_frequency'] ?? e['payment_method'])}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            sectionTitle('聯絡紀錄'),
-            if (logs.isEmpty)
-              const Card(
-                child: Padding(
-                  padding: EdgeInsets.all(18),
-                  child: Text('尚無聯絡紀錄'),
-                ),
-              ),
-            ...logs.map(
-              (e) => SizedBox(
-                height: 92,
-                child: Card(
-                  child: ListTile(
-                    onTap: () => editFollowLog(e),
-                    leading: const Icon(Icons.history),
-                    title: Text(
-                      textOf(e['summary']),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      '${textOf(e['channel'])} · ${formatDateOnly(e['contacted_at'])}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: PopupMenuButton<String>(
-                      onSelected: (value) async {
-                        if (value == 'edit') {
-                          await editFollowLog(e);
-                        } else if (value == 'delete') {
-                          await confirmDelete(context, () async {
-                            await repo.remove(
-                              'follow_logs',
-                              e['id'].toString(),
-                            );
-                            await load();
-                          });
-                        }
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(value: 'edit', child: Text('修改')),
-                        PopupMenuItem(value: 'delete', child: Text('刪除')),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),

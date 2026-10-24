@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'gift_repository.dart';
+import 'customer_gift_page.dart';
+import 'gift_delivery_progress_page.dart';
 
 class GiftManagementPage extends StatefulWidget {
   const GiftManagementPage({super.key});
@@ -15,22 +17,13 @@ class _GiftManagementPageState extends State<GiftManagementPage> {
 
   final NumberFormat currency = NumberFormat.decimalPattern('zh_TW');
 
-  String selectedFilter = '全部';
+  String selectedFilter = '黑鑽級';
 
   bool loading = true;
 
   String? error;
 
   List<FamilyGiftSummary> families = [];
-
-  static const filters = [
-    '全部',
-    '黑鑽級',
-    '白金級',
-    '金級',
-    '銀級',
-    '躉繳客戶',
-  ];
 
   @override
   void initState() {
@@ -66,10 +59,6 @@ class _GiftManagementPageState extends State<GiftManagementPage> {
   }
 
   List<FamilyGiftSummary> get filteredFamilies {
-    if (selectedFilter == '全部') {
-      return families;
-    }
-
     if (selectedFilter == '躉繳客戶') {
       return families.where((e) => e.lumpSumTotal > 0).toList();
     }
@@ -282,7 +271,7 @@ class _GiftManagementPageState extends State<GiftManagementPage> {
                         familyName: familyNameController.text,
                         customerIds: selectedIds.toList(),
                         primaryCustomerId: primaryId!,
-                        giftQuantity: family?.giftQuantity ?? 1,
+                        giftQuantity: 1,
                       );
 
                       if (dialogContext.mounted) {
@@ -415,10 +404,186 @@ class _GiftManagementPageState extends State<GiftManagementPage> {
     );
   }
 
+  Widget giftEntryCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 180),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 30),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Icon(Icons.chevron_right),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> showFamilyManagement() async {
+    await load();
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: const Color(0xFFF5F7FB),
+      builder: (sheetContext) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.86,
+          minChildSize: 0.55,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 10),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          '家庭管理',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '關閉',
+                        onPressed: () => Navigator.pop(sheetContext),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(sheetContext);
+                        await openFamilyEditor();
+                        if (mounted) {
+                          await load();
+                        }
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('建立家庭'),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: families.isEmpty
+                      ? const Center(
+                          child: Text('目前尚未建立家庭'),
+                        )
+                      : ListView.separated(
+                          controller: scrollController,
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+                          itemCount: families.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final family = families[index];
+
+                            return Card(
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 10,
+                                ),
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        family.familyName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE4EBFF),
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      child: Text(
+                                        family.tierName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Text(
+                                    '${family.memberCount} 人｜主要收禮人：${family.primaryRecipient}',
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.edit_outlined),
+                                onTap: () async {
+                                  Navigator.pop(sheetContext);
+                                  await openFamilyEditor(family: family);
+
+                                  if (mounted) {
+                                    await load();
+                                  }
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final visibleFamilies = filteredFamilies;
-
     return Scaffold(
       appBar: AppBar(
         centerTitle: true,
@@ -430,113 +595,58 @@ class _GiftManagementPageState extends State<GiftManagementPage> {
         ),
         actions: [
           IconButton(
+            tooltip: '家庭管理',
+            onPressed: showFamilyManagement,
+            icon: const Icon(Icons.family_restroom_rounded),
+          ),
+          IconButton(
             tooltip: '重新整理',
             onPressed: load,
             icon: const Icon(Icons.refresh),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => openFamilyEditor(),
-        icon: const Icon(Icons.add),
-        label: const Text('建立家庭'),
-      ),
-      body: RefreshIndicator(
-        onRefresh: load,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            20,
-            12,
-            20,
-            100,
-          ),
-          children: [
-            const Text(
-              '家庭送禮',
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '依家庭有效年繳保費自動分級',
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: filters.map(
-                  (filter) {
-                    return Padding(
-                      padding: const EdgeInsets.only(
-                        right: 8,
-                      ),
-                      child: ChoiceChip(
-                        label: Text(filter),
-                        selected: selectedFilter == filter,
-                        onSelected: (_) {
-                          setState(() {
-                            selectedFilter = filter;
-                          });
-                        },
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 28, 20, 40),
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: giftEntryCard(
+                  icon: Icons.people_alt_rounded,
+                  title: '客戶送禮',
+                  subtitle: '家庭送禮進度與客戶分級',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CustomerGiftPage(),
                       ),
                     );
                   },
-                ).toList(),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.symmetric(
-                  vertical: 60,
-                ),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              )
-            else if (error != null)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    '資料讀取失敗\n$error',
-                  ),
-                ),
-              )
-            else if (visibleFamilies.isEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      const Icon(
-                        Icons.card_giftcard_rounded,
-                        size: 44,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        families.isEmpty ? '尚未建立家庭資料' : '此分類目前沒有家庭',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+              const SizedBox(width: 14),
+              Expanded(
+                child: giftEntryCard(
+                  icon: Icons.handshake_rounded,
+                  title: '經營送禮',
+                  subtitle: '目前經營名單送禮進度',
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const GiftDeliveryProgressPage(
+                          personType: 'prospect',
+                          title: '經營送禮進度',
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              )
-            else
-              ...visibleFamilies.map(
-                familyCard,
               ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }

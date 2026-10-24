@@ -1,0 +1,687 @@
+import 'package:flutter/material.dart';
+
+import 'gift_repository.dart';
+
+class CustomerGiftPage extends StatefulWidget {
+  const CustomerGiftPage({super.key});
+
+  @override
+  State<CustomerGiftPage> createState() => _CustomerGiftPageState();
+}
+
+class _CustomerGiftPageState extends State<CustomerGiftPage> {
+  final GiftRepository repo = GiftRepository();
+
+  String selectedFilter = '送禮進度';
+  bool loading = true;
+  String? error;
+
+  List<FamilyGiftSummary> families = [];
+  Map<String, GiftDeliveryRecord> records = {};
+
+  static const filters = [
+    '送禮進度',
+    '黑鑽級',
+    '白金級',
+    '金級',
+    '銀級',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  int tierRank(String tier) {
+    switch (tier) {
+      case '黑鑽級':
+        return 4;
+      case '白金級':
+        return 3;
+      case '金級':
+        return 2;
+      case '銀級':
+      default:
+        return 1;
+    }
+  }
+
+  Future<void> load() async {
+    try {
+      final familyResult = await repo.familySummaries();
+      final deliveryResult = await repo.giftDeliveryMap('customer');
+
+      familyResult.sort((a, b) {
+        final tierCompare =
+            tierRank(b.tierName).compareTo(tierRank(a.tierName));
+
+        if (tierCompare != 0) return tierCompare;
+
+        final annualCompare = b.annualPremium.compareTo(a.annualPremium);
+
+        if (annualCompare != 0) return annualCompare;
+
+        return b.lumpSumTotal.compareTo(a.lumpSumTotal);
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        families = familyResult;
+        records = deliveryResult;
+        loading = false;
+        error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        loading = false;
+        error = e.toString();
+      });
+    }
+  }
+
+  List<FamilyGiftSummary> get filteredFamilies {
+    if (selectedFilter == '送禮進度') return families;
+
+    return families
+        .where((family) => family.tierName == selectedFilter)
+        .toList();
+  }
+
+  bool delivered(String familyId) {
+    return records[familyId]?.delivered == true;
+  }
+
+  int get deliveredCount {
+    return families.where((family) => delivered(family.familyId)).length;
+  }
+
+  Future<void> toggleDelivered(
+    FamilyGiftSummary family,
+    bool value,
+  ) async {
+    final id = family.familyId;
+    final previous = records[id];
+
+    setState(() {
+      records[id] = GiftDeliveryRecord(
+        personType: 'customer',
+        personId: id,
+        delivered: value,
+        deliveredAt: value ? DateTime.now() : null,
+      );
+    });
+
+    try {
+      await repo.setGiftDelivered(
+        personType: 'customer',
+        personId: id,
+        delivered: value,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        if (previous == null) {
+          records.remove(id);
+        } else {
+          records[id] = previous;
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('儲存失敗：$e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> resetProgress() async {
+    if (families.isEmpty) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('重設送禮進度'),
+          content: const Text(
+            '確定要清除所有客戶送禮勾選嗎？\n家庭與分級資料不會被刪除。',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('取消'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('全部清除'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await repo.resetGiftDeliveries('customer');
+
+      if (!mounted) return;
+
+      setState(() {
+        records = {};
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('已清除客戶送禮進度'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('重設失敗：$e'),
+        ),
+      );
+    }
+  }
+
+  Widget tierBadge(String tier) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 6,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE4EBFF),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Text(
+        tier,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget progressSummary() {
+    final total = families.length;
+    final done = deliveredCount;
+    final progress = total == 0 ? 0.0 : done / total;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '送禮進度',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '已送 $done / $total',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 14),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 10,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            const SizedBox(height: 8),
+            Text('${(progress * 100).round()}%'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget deliveryCard(FamilyGiftSummary family) {
+    final isDelivered = delivered(family.familyId);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: CheckboxListTile(
+        value: isDelivered,
+        onChanged: (value) {
+          if (value == null) return;
+          toggleDelivered(family, value);
+        },
+        controlAffinity: ListTileControlAffinity.trailing,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 18,
+          vertical: 10,
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                family.familyName,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  decoration: isDelivered ? TextDecoration.lineThrough : null,
+                ),
+              ),
+            ),
+            tierBadge(family.tierName),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+            '主要收禮人：${family.primaryRecipient}｜本次送禮：1 份',
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> openFamilyEditor({
+    FamilyGiftSummary? family,
+  }) async {
+    try {
+      final customers = await repo.customers();
+
+      final assigned = await repo.assignedCustomerIds(
+        excludingFamilyId: family?.familyId,
+      );
+
+      if (!mounted) return;
+
+      final available = customers
+          .where(
+            (customer) => !assigned.contains(
+              customer['id']?.toString(),
+            ),
+          )
+          .toList();
+
+      final familyNameController = TextEditingController(
+        text: family?.familyName ?? '',
+      );
+
+      final searchController = TextEditingController();
+
+      final selectedIds = <String>{...?family?.memberIds};
+
+      String? primaryId = family?.primaryCustomerId;
+
+      String searchText = '';
+
+      final saved = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              final visibleCustomers = available.where(
+                (customer) {
+                  final name = customer['name']?.toString().toLowerCase() ?? '';
+
+                  return searchText.isEmpty ||
+                      name.contains(
+                        searchText.toLowerCase(),
+                      );
+                },
+              ).toList();
+
+              final selectedCustomers = available
+                  .where(
+                    (customer) => selectedIds.contains(
+                      customer['id']?.toString(),
+                    ),
+                  )
+                  .toList();
+
+              return AlertDialog(
+                title: Text(
+                  family == null ? '建立家庭' : '修改家庭',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                content: SizedBox(
+                  width: 540,
+                  height: MediaQuery.of(context).size.height * 0.72,
+                  child: Column(
+                    children: [
+                      TextField(
+                        controller: familyNameController,
+                        decoration: const InputDecoration(
+                          labelText: '家庭名稱',
+                          hintText: '例如：王聖恩家庭',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: searchController,
+                        decoration: const InputDecoration(
+                          labelText: '搜尋客戶',
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                        ),
+                        onChanged: (value) {
+                          setDialogState(() {
+                            searchText = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '家庭成員',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: visibleCustomers.length,
+                          itemBuilder: (context, index) {
+                            final customer = visibleCustomers[index];
+
+                            final id = customer['id'].toString();
+
+                            final name = customer['name']?.toString() ?? '未命名';
+
+                            return CheckboxListTile(
+                              value: selectedIds.contains(
+                                id,
+                              ),
+                              title: Text(name),
+                              contentPadding: EdgeInsets.zero,
+                              dense: true,
+                              onChanged: (value) {
+                                setDialogState(() {
+                                  if (value == true) {
+                                    selectedIds.add(id);
+
+                                    primaryId ??= id;
+                                  } else {
+                                    selectedIds.remove(id);
+
+                                    if (primaryId == id) {
+                                      primaryId = selectedIds.isEmpty
+                                          ? null
+                                          : selectedIds.first;
+                                    }
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      if (selectedCustomers.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            '$primaryId-${selectedIds.length}',
+                          ),
+                          initialValue: selectedIds.contains(primaryId)
+                              ? primaryId
+                              : selectedIds.first,
+                          decoration: const InputDecoration(
+                            labelText: '主要收禮人',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: selectedCustomers
+                              .map(
+                                (customer) => DropdownMenuItem<String>(
+                                  value: customer['id'].toString(),
+                                  child: Text(
+                                    customer['name']?.toString() ?? '未命名',
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setDialogState(() {
+                              primaryId = value;
+                            });
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(
+                      dialogContext,
+                      false,
+                    ),
+                    child: const Text('取消'),
+                  ),
+                  FilledButton(
+                    onPressed: () async {
+                      if (familyNameController.text.trim().isEmpty ||
+                          selectedIds.isEmpty) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              '請輸入家庭名稱並選擇家庭成員',
+                            ),
+                          ),
+                        );
+
+                        return;
+                      }
+
+                      primaryId ??= selectedIds.first;
+
+                      await repo.saveFamily(
+                        familyId: family?.familyId,
+                        familyName: familyNameController.text,
+                        customerIds: selectedIds.toList(),
+                        primaryCustomerId: primaryId!,
+                        giftQuantity: 1,
+                      );
+
+                      if (dialogContext.mounted) {
+                        Navigator.pop(
+                          dialogContext,
+                          true,
+                        );
+                      }
+                    },
+                    child: Text(
+                      family == null ? '建立家庭' : '儲存修改',
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      familyNameController.dispose();
+      searchController.dispose();
+
+      if (saved == true) {
+        await load();
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '家庭資料儲存失敗：$e',
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget familyCard(FamilyGiftSummary family) {
+    return InkWell(
+        onTap: () => openFamilyEditor(family: family),
+        child: Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        family.familyName,
+                        style: const TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    tierBadge(family.tierName),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  '家庭成員：${family.memberCount} 人',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(family.memberNames.join('、')),
+                const SizedBox(height: 6),
+                Text('主要收禮人：${family.primaryRecipient}'),
+                const SizedBox(height: 6),
+                const Text(
+                  '本次送禮：1 份',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleFamilies = filteredFamilies;
+
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text(
+          '客戶送禮',
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: '重新整理資料',
+            icon: const Icon(Icons.refresh),
+            onPressed: load,
+          ),
+          if (selectedFilter != '送禮進度')
+            IconButton(
+              tooltip: '新增家庭',
+              icon: const Icon(Icons.add),
+              onPressed: () => openFamilyEditor(),
+            ),
+          if (selectedFilter == '送禮進度')
+            TextButton.icon(
+              onPressed: resetProgress,
+              icon: const Icon(Icons.restart_alt_rounded),
+              label: const Text(
+                '重設',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: load,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: filters.map((filter) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(filter),
+                      selected: selectedFilter == filter,
+                      onSelected: (_) {
+                        setState(() {
+                          selectedFilter = filter;
+                        });
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 18),
+            if (loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 60),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (error != null)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text('資料讀取失敗\n$error'),
+                ),
+              )
+            else ...[
+              if (selectedFilter == '送禮進度') ...[
+                progressSummary(),
+                const SizedBox(height: 16),
+              ],
+              if (visibleFamilies.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(
+                      child: Text('目前沒有資料'),
+                    ),
+                  ),
+                )
+              else if (selectedFilter == '送禮進度')
+                ...visibleFamilies.map(deliveryCard)
+              else
+                ...visibleFamilies.map(familyCard),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}

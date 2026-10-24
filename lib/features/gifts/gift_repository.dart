@@ -31,6 +31,33 @@ class FamilyGiftSummary {
   final int giftQuantity;
 }
 
+class GiftDeliveryRecord {
+  const GiftDeliveryRecord({
+    required this.personType,
+    required this.personId,
+    required this.delivered,
+    this.deliveredAt,
+  });
+
+  final String personType;
+  final String personId;
+  final bool delivered;
+  final DateTime? deliveredAt;
+
+  factory GiftDeliveryRecord.fromMap(Map<String, dynamic> row) {
+    final rawDate = row['delivered_at']?.toString();
+
+    return GiftDeliveryRecord(
+      personType: row['person_type']?.toString() ?? '',
+      personId: row['person_id']?.toString() ?? '',
+      delivered: row['delivered'] == true,
+      deliveredAt: rawDate == null || rawDate.isEmpty
+          ? null
+          : DateTime.tryParse(rawDate),
+    );
+  }
+}
+
 class GiftRepository {
   final SupabaseClient client = Supabase.instance.client;
 
@@ -60,6 +87,59 @@ class GiftRepository {
       default:
         return amount;
     }
+  }
+
+  Future<Map<String, GiftDeliveryRecord>> giftDeliveryRecords(
+    String personType,
+  ) async {
+    final rows = await client
+        .from('gift_delivery_records')
+        .select('person_type,person_id,delivered,delivered_at')
+        .eq('user_id', uid)
+        .eq('person_type', personType);
+
+    final result = <String, GiftDeliveryRecord>{};
+
+    for (final raw in rows as List) {
+      final row = Map<String, dynamic>.from(raw as Map);
+      final record = GiftDeliveryRecord.fromMap(row);
+
+      if (record.personId.isNotEmpty) {
+        result[record.personId] = record;
+      }
+    }
+
+    return result;
+  }
+
+  Future<void> setGiftDelivered({
+    required String personType,
+    required String personId,
+    required bool delivered,
+  }) async {
+    await client.from('gift_delivery_records').upsert(
+      {
+        'user_id': uid,
+        'person_type': personType,
+        'person_id': personId,
+        'delivered': delivered,
+        'delivered_at': delivered ? DateTime.now().toIso8601String() : null,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      onConflict: 'user_id,person_type,person_id',
+    );
+  }
+
+  Future<void> resetGiftDeliveries(String personType) async {
+    await client
+        .from('gift_delivery_records')
+        .update({
+          'delivered': false,
+          'delivered_at': null,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('user_id', uid)
+        .eq('person_type', personType);
   }
 
   Future<List<Map<String, dynamic>>> customers() async {
@@ -237,14 +317,41 @@ class GiftRepository {
       ];
     }
 
-    String tierFor(double annualPremium) {
-      for (final tier in tiers) {
-        if (annualPremium >= _number(tier['min_annual_premium'])) {
-          return tier['tier_name']?.toString() ?? '銀級';
+    String tierFor(double annualPremium, double lumpSumTotal) {
+      int rank(String tier) {
+        switch (tier) {
+          case '黑鑽級':
+            return 4;
+          case '白金級':
+            return 3;
+          case '金級':
+            return 2;
+          case '銀級':
+          default:
+            return 1;
         }
       }
 
-      return '銀級';
+      String annualTier() {
+        for (final tier in tiers) {
+          if (annualPremium >= _number(tier['min_annual_premium'])) {
+            return tier['tier_name']?.toString() ?? '銀級';
+          }
+        }
+        return '銀級';
+      }
+
+      String lumpTier() {
+        if (lumpSumTotal > 3000000) return '黑鑽級';
+        if (lumpSumTotal > 2000000) return '白金級';
+        if (lumpSumTotal > 1000000) return '金級';
+        return '銀級';
+      }
+
+      final annualResult = annualTier();
+      final lumpResult = lumpTier();
+
+      return rank(annualResult) >= rank(lumpResult) ? annualResult : lumpResult;
     }
 
     final summaries = <FamilyGiftSummary>[];
@@ -299,12 +406,25 @@ class GiftRepository {
         final amount = _number(policy['premium_amount']);
 
         if (frequency == '躉繳') {
-          lumpSumTotal += amount;
-        } else {
-          final storedAnnual = _number(policy['annual_premium']);
+          final storedLumpTwd = _number(policy['lump_sum_twd']);
 
-          annualPremium +=
-              storedAnnual > 0 ? storedAnnual : _annualized(amount, frequency);
+          final rate = _number(policy['exchange_rate']) > 0
+              ? _number(policy['exchange_rate'])
+              : 1.0;
+
+          lumpSumTotal += storedLumpTwd > 0 ? storedLumpTwd : amount * rate;
+        } else {
+          final storedAnnualTwd = _number(policy['annual_premium_twd']);
+
+          if (storedAnnualTwd > 0) {
+            annualPremium += storedAnnualTwd;
+          } else {
+            final rate = _number(policy['exchange_rate']) > 0
+                ? _number(policy['exchange_rate'])
+                : 1.0;
+
+            annualPremium += _annualized(amount * rate, frequency);
+          }
         }
       }
 
@@ -323,12 +443,25 @@ class GiftRepository {
         final amount = _number(rider['premium_amount']);
 
         if (frequency == '躉繳') {
-          lumpSumTotal += amount;
-        } else {
-          final storedAnnual = _number(rider['annual_premium']);
+          final storedLumpTwd = _number(rider['lump_sum_twd']);
 
-          annualPremium +=
-              storedAnnual > 0 ? storedAnnual : _annualized(amount, frequency);
+          final rate = _number(rider['exchange_rate']) > 0
+              ? _number(rider['exchange_rate'])
+              : 1.0;
+
+          lumpSumTotal += storedLumpTwd > 0 ? storedLumpTwd : amount * rate;
+        } else {
+          final storedAnnualTwd = _number(rider['annual_premium_twd']);
+
+          if (storedAnnualTwd > 0) {
+            annualPremium += storedAnnualTwd;
+          } else {
+            final rate = _number(rider['exchange_rate']) > 0
+                ? _number(rider['exchange_rate'])
+                : 1.0;
+
+            annualPremium += _annualized(amount * rate, frequency);
+          }
         }
       }
 
@@ -338,7 +471,7 @@ class GiftRepository {
         FamilyGiftSummary(
           familyId: familyId,
           familyName: family['family_name']?.toString() ?? '未命名家庭',
-          tierName: tierFor(annualPremium),
+          tierName: tierFor(annualPremium, lumpSumTotal),
           annualPremium: annualPremium,
           lumpSumTotal: lumpSumTotal,
           memberCount: familyMemberIds.length,
@@ -354,10 +487,140 @@ class GiftRepository {
       );
     }
 
-    summaries.sort(
-      (a, b) => b.annualPremium.compareTo(a.annualPremium),
-    );
+    int familyTierRank(String tier) {
+      switch (tier) {
+        case '黑鑽級':
+          return 4;
+        case '白金級':
+          return 3;
+        case '金級':
+          return 2;
+        case '銀級':
+        default:
+          return 1;
+      }
+    }
+
+    summaries.sort((a, b) {
+      final tierCompare =
+          familyTierRank(b.tierName).compareTo(familyTierRank(a.tierName));
+
+      if (tierCompare != 0) return tierCompare;
+
+      final annualCompare = b.annualPremium.compareTo(a.annualPremium);
+
+      if (annualCompare != 0) return annualCompare;
+
+      return b.lumpSumTotal.compareTo(a.lumpSumTotal);
+    });
 
     return summaries;
+  }
+}
+
+extension GiftDeliveryRepository on GiftRepository {
+  /// 客戶送禮名單
+  Future<List<Map<String, dynamic>>> customerGiftRecipients() async {
+    final familyList = await familySummaries();
+
+    int tierRank(String tier) {
+      switch (tier) {
+        case '黑鑽級':
+          return 4;
+        case '白金級':
+          return 3;
+        case '金級':
+          return 2;
+        case '銀級':
+        default:
+          return 1;
+      }
+    }
+
+    familyList.sort((a, b) {
+      final tierCompare = tierRank(b.tierName).compareTo(tierRank(a.tierName));
+
+      if (tierCompare != 0) return tierCompare;
+
+      final annualCompare = b.annualPremium.compareTo(a.annualPremium);
+
+      if (annualCompare != 0) return annualCompare;
+
+      return b.lumpSumTotal.compareTo(a.lumpSumTotal);
+    });
+
+    return familyList
+        .map(
+          (family) => <String, dynamic>{
+            'person_type': 'customer',
+            'person_id': family.familyId,
+            'name': family.familyName,
+            'tier_name': family.tierName,
+            'annual_premium': family.annualPremium,
+            'lump_sum_total': family.lumpSumTotal,
+            'member_count': family.memberCount,
+            'primary_recipient': family.primaryRecipient,
+            'gift_quantity': 1,
+          },
+        )
+        .toList();
+  }
+
+  /// 經營送禮名單
+  /// 排除已轉客戶，避免和正式客戶名單重複。
+  Future<List<Map<String, dynamic>>> prospectGiftRecipients() async {
+    final rows = await client
+        .from('prospects')
+        .select('id,name,status')
+        .eq('user_id', uid)
+        .order('name');
+
+    final result = <Map<String, dynamic>>[];
+
+    for (final raw in rows as List) {
+      final row = Map<String, dynamic>.from(raw as Map);
+
+      final id = row['id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+
+      final status = row['status']?.toString().trim() ?? '';
+
+      if (status == '已成交' || status == '已轉客戶') {
+        continue;
+      }
+
+      result.add({
+        'person_type': 'prospect',
+        'person_id': id,
+        'name': row['name']?.toString() ?? '未命名',
+        'status': status.isEmpty ? '經營中' : status,
+      });
+    }
+
+    return result;
+  }
+
+  /// 讀取目前送禮勾選紀錄
+  Future<Map<String, GiftDeliveryRecord>> giftDeliveryMap(
+    String personType,
+  ) async {
+    final rows = await client
+        .from('gift_delivery_records')
+        .select()
+        .eq('user_id', uid)
+        .eq('person_type', personType);
+
+    final result = <String, GiftDeliveryRecord>{};
+
+    for (final raw in rows as List) {
+      final row = Map<String, dynamic>.from(raw as Map);
+      final record = GiftDeliveryRecord.fromMap(row);
+
+      if (record.personId.isNotEmpty) {
+        result[record.personId] = record;
+      }
+    }
+
+    return result;
   }
 }

@@ -197,6 +197,16 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
     String policyStatus = textOf(row?['policy_status']).isNotEmpty
         ? textOf(row?['policy_status'])
         : '有效';
+    String currencyCode = textOf(row?['currency_code']).isNotEmpty
+        ? textOf(row?['currency_code'])
+        : 'TWD';
+
+    final exchangeRate = TextEditingController(
+      text: textOf(row?['exchange_rate']).isNotEmpty
+          ? textOf(row?['exchange_rate'])
+          : '1',
+    );
+
     final premium = TextEditingController(
         text: textOf(row?['premium_amount']).isNotEmpty
             ? textOf(row?['premium_amount'])
@@ -269,6 +279,45 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
                               (e) => DropdownMenuItem(value: e, child: Text(e)))
                           .toList(),
                       onChanged: (v) => setSheet(() => insurer = v)),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: currencyCode,
+                    decoration: const InputDecoration(
+                      labelText: '幣別',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const ['TWD', 'USD', 'AUD', 'JPY', 'EUR']
+                        .map(
+                          (e) => DropdownMenuItem<String>(
+                            value: e,
+                            child: Text(e),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setSheet(() {
+                        currencyCode = v;
+                        if (v == 'TWD') {
+                          exchangeRate.text = '1';
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: exchangeRate,
+                    enabled: currencyCode != 'TWD',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: currencyCode == 'TWD'
+                          ? '匯率（TWD 固定 1）'
+                          : '匯率（1 $currencyCode = ? TWD）',
+                      border: const OutlineInputBorder(),
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                       initialValue: frequency,
@@ -394,6 +443,29 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
 
     if (saved != true || product.text.trim().isEmpty || insurer == null) return;
     final amount = double.tryParse(premium.text) ?? 0;
+
+    final rate =
+        currencyCode == 'TWD' ? 1.0 : (double.tryParse(exchangeRate.text) ?? 0);
+
+    if (currencyCode != 'TWD' && rate <= 0) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('請輸入正確的外幣匯率')),
+        );
+      }
+      return;
+    }
+
+    final premiumTwd = amount * rate;
+
+    final annualOriginal =
+        frequency == '躉繳' ? 0.0 : annualized(amount, frequency);
+
+    final annualTwd =
+        frequency == '躉繳' ? 0.0 : annualized(premiumTwd, frequency);
+
+    final lumpSumTwd = frequency == '躉繳' ? premiumTwd : 0.0;
+
     final values = {
       'customer_id': customerId,
       'product_name': product.text.trim(),
@@ -401,8 +473,13 @@ class _CustomerPoliciesPageState extends State<CustomerPoliciesPage> {
       'payment_frequency': frequency,
       'payment_method': frequency,
       'policy_status': policyStatus,
+      'currency_code': currencyCode,
+      'exchange_rate': rate,
       'premium_amount': amount,
-      'annual_premium': annualized(amount, frequency),
+      'premium_twd': premiumTwd,
+      'annual_premium': annualOriginal,
+      'annual_premium_twd': annualTwd,
+      'lump_sum_twd': lumpSumTwd,
       'coverage_amount': double.tryParse(coverage.text) ?? 0,
       'effective_date': blank(effective.text),
       'maturity_date': blank(maturity.text),
