@@ -969,7 +969,7 @@ class _CustomerDetailPageState extends State<CustomerDetailPage> {
                 ),
               ],
             ),
-            if (engagementHistory.isNotEmpty) ...[
+            ...[
               sectionTitle('聯絡紀錄'),
               if (logs.isEmpty)
                 const Card(

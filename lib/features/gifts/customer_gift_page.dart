@@ -214,7 +214,74 @@ class _CustomerGiftPageState extends State<CustomerGiftPage> {
   Widget progressSummary() {
     final total = families.length;
     final done = deliveredCount;
+    final remaining = total - done;
     final progress = total == 0 ? 0.0 : done / total;
+
+    const tierOrder = ['黑鑽級', '白金級', '金級', '銀級'];
+
+    Widget tierRow(String tier) {
+      final tierFamilies =
+          families.where((family) => family.tierName == tier).toList();
+
+      final tierTotal = tierFamilies.length;
+      final tierDone =
+          tierFamilies.where((family) => delivered(family.familyId)).length;
+      final tierRemaining = tierTotal - tierDone;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              flex: 3,
+              child: Text(
+                tier,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                '共 $tierTotal 戶',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                '已送 $tierDone',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Text(
+                '剩 $tierRemaining',
+                textAlign: TextAlign.end,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: tierRemaining == 0
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Card(
       child: Padding(
@@ -230,12 +297,33 @@ class _CustomerGiftPageState extends State<CustomerGiftPage> {
               ),
             ),
             const SizedBox(height: 14),
-            Text(
-              '已送 $done / $total',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '共 $total 戶',
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Text(
+                  '已送 $done',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Text(
+                  '剩 $remaining',
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 14),
             LinearProgressIndicator(
@@ -244,7 +332,24 @@ class _CustomerGiftPageState extends State<CustomerGiftPage> {
               borderRadius: BorderRadius.circular(10),
             ),
             const SizedBox(height: 8),
-            Text('${(progress * 100).round()}%'),
+            Text(
+              '${(progress * 100).round()}%',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 8),
+            const Text(
+              '各級別送禮進度',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...tierOrder.map(tierRow),
           ],
         ),
       ),
